@@ -17,7 +17,7 @@
   (/ (* d pi) 180))
 
 (defun adf (stream arg colon at &rest args)
-  ; aligned decimal "F"
+  ;; aligned decimal "F"
   (declare (ignore colon at))
   (destructuring-bind (width digits &optional (pad #\Space)) args
     (let* ((string (format nil "~v,vf" width digits arg))
@@ -42,11 +42,6 @@
          (r (cond ((and (not (minusp s)) (not (minusp c))) as)
                   ((and (not (minusp s)) (minusp c)) ac)
                   (t (- (* 2 pi) ac)))))
-;    (if (realp r)
-;        r
-;        (if (realp as)
-;            as
-;            ac))))
     r))
 
 (defun |#d-reader| (stream sub-char numarg)
@@ -169,7 +164,7 @@
          (Ωcos (/ pmhy hsini)) ; cos(Ω)
          (Ω (resolve Ωsin Ωcos))
          (ξ (- (/ (* v0 v0) 2) (/ u r0))) ; energy of vehicle. ellipse is neg, parabola is 0,
-                                          ; hyperbola is positive
+                                        ; hyperbola is positive
          (alpha (* -1.0 (/ u (* 2 ξ)))) ; semi-major axis
          (e (sqrt (- 1 (/ p alpha)))) ; eccentricity
          (f (xyz->true-anomaly rv vv hv u))
@@ -178,9 +173,6 @@
          (wf (resolve wfsin wfcos))
          (e0 (true->eccentric f e))
          (m0 (- e0 (* e (sin e0)))))
-    ;(format t "6e: true anomaly = ~f~%" f)
-    ;(list alpha e i Ω (norm-rev (- wf f)) (- (* 2 pi) m0))))
-    ;(format t "hx=~a hy=~a hz=~a h=~a pmhx=~a pmhy=~a Ωsin=~a Ωcos=~a~%" hx hy hz h pmhx pmhy Ωsin Ωcos)
     (list alpha e i Ω (norm-rev (- wf f)) m0)))
 
 (defun display-6e (elems)
@@ -248,21 +240,21 @@
   (destructuring-bind (a1 a2 a3)
       a
     (list a1
-          (+ (* a2 (cos alpha)) (* a3 (sin alpha))) ;    + a(2)*cos(alpha) + a(3)*sin(alpha);
-          (- (* a3 (cos alpha)) (* a2 (sin alpha))))))  ;   - a(2)*sin(alpha) + a(3)*cos(alpha);
+          (+ (* a2 (cos alpha)) (* a3 (sin alpha)))
+          (- (* a3 (cos alpha)) (* a2 (sin alpha))))))
 
 (defun rot3 (a gamma)
   (destructuring-bind (a1 a2 a3)
       a
-    (list (+ (* a1 (cos gamma)) (* a2 (sin gamma))) ;a(1)*cos(gamma) + a(2)*sin(gamma) + 0 
-          (+ (* -1 a1 (sin gamma)) (* a2 (cos gamma))) ;-a(1)*sin(gamma) + a(2)*cos(gamma)
+    (list (+ (* a1 (cos gamma)) (* a2 (sin gamma)))
+          (+ (* -1 a1 (sin gamma)) (* a2 (cos gamma)))
           a3)))
-                                      
+
 (defun safely (v &rest r)
   (labels ((check (v1 v2)
              (cond ((or (null v1)
                         (null v2)) nil)
-                    (t (< (abs (- v1 v2)) 1d-15)))))
+                   (t (< (abs (- v1 v2)) 1d-15)))))
     (cond ((null r) v)
           ((equal r '(nil)) v)
           ((atom r) (if (check r v)
@@ -274,7 +266,6 @@
           (t (if (check (car r) v)
                  (+ v 1d-6)
                  (safely v (cdr r)))))))
- 
 
 (defun k->c (u-i alpha-i e-i i-i Ω-i w-i m01-i dt-i)
   "Convert 6 element orbital elements to xyz format, at time dt from epoch"
@@ -304,7 +295,6 @@
          (vel (rot3 (rot1 (rot3 (list VPQW1 VPQW2 VPQW3) (* -1 w)) (* -1 i)) (* -1 Ω))))
     (destructuring-bind ((r1 r2 r3) (v1 v2 v3))
         (list pos vel)
-      ;(format t "True anomaly: ~e~%" Nt)
       (list r1 r2 r3 v1 v2 v3))))
 
 (defun xyz (&key (u 3.9860044d14) (alpha 7231745.57d0) (e 0.0010013d0)
@@ -326,102 +316,3 @@
 
 (set-dispatch-macro-character #\{ #\k #'|#k-reader|)
 
-; test support functions follow
-
-(defun 2.2.4.1 ()
-  "Page 50 from Statistical Orbit Determination"
-  (display-6e '{c3.9860044d14 5492000.34d0 3984001.4d0 2955.81d0 -3931.046491d0 5498.676921d0 3665.980697d0}))
-
-(defun 2.2.4.2 ()
-  "Page 51 from Statistical Orbit Determination"
-  '{k3.9860044d14 7231745.57d0 0.0010013d0 [d98.9964] [d181.3428] [d113.9737] [d246.2483] 0d0})
-
-(defun diff-of (t1i t2i)
-  (let ((t1 (if (zerop t1i)
-                1e-6
-                t1i))
-        (t2 (if (zerop t2i)
-                1e-6
-                t2i)))
-    (- 1 (if (> (abs t1) (abs t2))
-             (/ t2 t1)
-             (/ t1 t2)))))
-
-(defun diffs (l1 l2)
-  (cond ((null l1) '())
-        ((atom l1) (diff-of l1 l2))
-        (t (cons (diff-of (car l1) (car l2)) (diffs (cdr l1) (cdr l2))))))
-
-;(defun run-test (u alpha e i Ω w m0)
-;  (declare (type long-float u alpha e i Ω w m0))
-;  ; first, convert to xyz
-;  (destructuring-bind (x y z dx dy dz)
-;      (xyz u alpha e i Ω w m0 0d0)
-;  ; then back to 6e
-;    (destructuring-bind (n-alpha n-e n-i n-Ω n-w n-m0)
-;  ; then compare before and after to see how different they are
-;        (6e u x y z dx dy dz)
-;      (loop for x in (diffs (list alpha e i Ω w m0)
-;                            (list n-alpha n-e n-i n-Ω n-w n-m0))
-;         collect (< x .001)))))
-;
-;(defun run-show-test (u alpha e i Ω w m0)
-;  (declare (type long-float u alpha e i Ω w m0))
-;  (format t "i: alpha = ~f e = ~f i = ~f Ω = ~f w = ~f m0 = ~f~%" alpha e (radians->degrees i) (radians->degrees Ω) (radians->degrees w) (radians->degrees m0))
-;  ; first, convert to xyz
-;  (destructuring-bind (x y z dx dy dz)
-;      (xyz u alpha e i Ω w m0 0d0)
-;  ; then back to 6e
-;    (format t "c: x=~f y=~f z=~f dx=~f dy=~f dz=~f~%" x y z dx dy dz)
-;    (destructuring-bind (n-alpha n-e n-i n-Ω n-w n-m0)
-;  ; then compare before and after to see how different they are
-;        (6e u x y z dx dy dz)
-;
-;      (format t "k: n-alpha = ~f n-e = ~f n-i = ~f n-O = ~f n-W = ~f n-M0 = ~f~%" n-alpha n-e (radians->degrees n-i) (radians->degrees n-Ω) (radians->degrees n-w) (radians->degrees n-m0))
-;      (loop for x in (diffs (list alpha e i Ω w m0)
-;                            (list n-alpha n-e n-i n-Ω n-w n-m0))
-;         collect (< x .001)))))
-;
-;(defun test ()
-;  (destructuring-bind (u (alpha e i Ω w m0))
-;      (list 3.9860044d14 (6e 3.9860044d14 5492000.34d0 3984001.4d0 2955.81d0 -3931.046491d0 5498.676921d0 3665.980697d0))
-;    (declare (ignore m0))
-;    (loop for j from 175 to 185
-;       for y = (list 0 0 0 0 0) then x
-;       for x = (xyz u alpha e i Ω w (degrees->radians j) 0d0)
-;       for z = (mapcar #'- x y)
-;       collect z)))
-;                     
-;(defun test2 (a b)
-;  (destructuring-bind (u (alpha e i Ω w m0))
-;      (list 3.9860044d14 (6e 3.9860044d14 5492000.34d0 3984001.4d0 2955.81d0 -3931.046491d0 5498.676921d0 3665.980697d0))
-;    (declare (ignore m0))
-;    (loop for j from a to b
-;       collect (run-show-test u alpha e i Ω w (degrees->radians j)))))
-;
-;(defun test3 (a b)
-;  (destructuring-bind (u (alpha e i Ω w m0))
-;      (list 3.9860044d14 (6e 3.9860044d14 5492000.34d0 3984001.4d0 2955.81d0 -3931.046491d0 5498.676921d0 3665.980697d0))
-;    (declare (ignore m0))
-;    (with-open-file (s "data.csv" :direction :output :if-exists :supersede)
-;      (loop for (n (x y z vx vy vz)) in 
-;           (loop for j from a to b
-;              collect (list j (xyz u alpha e i Ω w (degrees->radians j) 0d0)))
-;         do (format s "~a,~a,~a,~a,~a,~a,~a~%" n x y z vx vy vz)))))
-;      
-;(defun test-i-1 (a b)
-;  (destructuring-bind (u (alpha e i Ω w m0))
-;      (list 3.9860044d14 (6e 3.9860044d14 5492000.34d0 3984001.4d0 2955.81d0 -3931.046491d0 5498.676921d0 3665.980697d0))
-;    (declare (ignore i))
-;    (loop for j from a to b
-;       collect (run-show-test u alpha e (degrees->radians j) Ω w m0))))
-;  
-;(defun random-test (&key (a 7231745.57d0) (e .05d0) (u 3.9860044d14))
-;  (let ((omega (random 360))
-;        (w (random 360))
-;        (m0 (random 360))
-;        (i (random 180)))
-;    (list a e i omega w m0 (run-show-test u a e (degrees->radians i) (degrees->radians omega)
-;                   (degrees->radians w) (degrees->radians m0)))))
-;  
-;  
