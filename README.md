@@ -14,7 +14,7 @@ represent the velocity (m/s) along each axis.  This returns a vector
 of 6 elements: semimajor axis, eccentricity, inclination, longitude of
 ascending node, argument of periapsis, and mean anomaly at epoch.
 
-The other reader macro converts keplerian elements to cartesion vectors:
+The other reader macro converts keplerian elements to cartesian vectors:
 
 {k**Mu alpha e i omega w M0 dT**}
 
